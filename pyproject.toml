@@ -10,6 +10,14 @@ python = "^3.12"
 streamlit = "^1.36.0"
 gradio = "^4.38.1"
 openai = "^1.36.0"
+tiktoken = "^0.7.0"
+langchain-core = "^0.2.22"
+langchain-community = "^0.2.9"
+langchain-openai = "^0.1.17"
+anthropic = "^0.31.2"
+langchain-anthropic = "^0.1.20"
+langchain-google-genai = "^1.0.7"
+google-generativeai = "^0.7.2"
 
 
 [build-system]
