@@ -22,13 +22,14 @@ def main():
     # セッション状態にメッセージ履歴がなければ初期化
     if "message history" not in st.session_state:
         st.session_state.message_history = [
-            ("system", "You are a helpful AI assistant. ")
+            ("system", "絶対に関西弁で返答してください")
         ]
     
     # ChatOpenAIインスタンスの作成
     llm = ChatOpenAI(
         api_key=get_gpt_openai_apikey(),
-        model="gpt-4o-mini"
+        model="gpt-4o-mini",
+        temperature=0.8
     )
 
     # ユーザーとAIのメッセージ履歴からプロンプトを作成
@@ -44,7 +45,7 @@ def main():
     chain = prompt | llm | output_parser
 
     # ユーザーからの入力を受け取る
-    if user_message := st.chat_input("聞きたいことを入力してください"):
+    if user_message := st.chat_input("聞きたいことを入力してや。"):
         with st.spinner("AI が考え中..."):
             # チェーンを実行してレスポンスを取得
             response = chain.invoke({"user_message": user_message})
@@ -57,7 +58,10 @@ def main():
 
         # メッセージ履歴を表示
         for role, message in st.session_state.get("message_history", []):
-            st.chat_message(role).markdown(message)
+            # st.chat_message(role).markdown(message)
+            with st.chat_message(role):
+                st.markdown(message)
+                
 
 if __name__ == "__main__":
     main()
