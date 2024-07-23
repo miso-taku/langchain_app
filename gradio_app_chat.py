@@ -10,16 +10,6 @@ def get_gpt_openai_apikey() -> str:
         secret = json.load(f)
     return secret["OPENAI_API_KEY"]
 
-# ChatOpenAIインスタンスの作成
-llm = ChatOpenAI(
-    api_key=get_gpt_openai_apikey(),
-    model="gpt-4o-mini",
-    temperature=0.8
-)
-
-# 出力パーサーのインスタンスを作成
-output_parser = StrOutputParser()
-
 # メッセージ履歴を保持するグローバル変数
 message_history = [
     ("system", "絶対に関西弁で返答してください")
@@ -28,6 +18,16 @@ message_history = [
 def chat_with_ai(user_message, history):
     global message_history
     
+    # ChatOpenAIインスタンスの作成
+    llm = ChatOpenAI(
+        api_key=get_gpt_openai_apikey(),
+        model="gpt-4o-mini",
+        temperature=0.8
+    )
+
+    # 出力パーサーのインスタンスを作成
+    output_parser = StrOutputParser()
+
     # ユーザーメッセージをメッセージ履歴に追加
     message_history.append(("user", user_message))
     
