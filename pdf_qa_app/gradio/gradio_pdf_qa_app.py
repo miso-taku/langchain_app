@@ -77,7 +77,7 @@ def process_pdf(pdf_file: gr.File) -> Tuple[str, Optional[FAISS]]:
         text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
             model_name="text-embedding-3-small",
             chunk_size=500,
-            chunk_overlap=0
+            chunk_overlap=50
         )
         split_texts = text_splitter.split_text(pdf_text)
 
