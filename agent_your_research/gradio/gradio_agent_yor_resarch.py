@@ -1,27 +1,21 @@
-# GitHub: https://github.com/naotaka1128/llm_app_codes/chapter_009/main.py
-import json
+# gradioを使用したWebブラウジングエージェント
+# ライブラリのインポート
 import os
-
-import streamlit as st
+import json
+import gradio as gr
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from langchain.memory import ConversationBufferWindowMemory
 from langchain_core.prompts import MessagesPlaceholder, ChatPromptTemplate
-from langchain_core.runnables import RunnableConfig
-from langchain_community.callbacks import StreamlitCallbackHandler
-
-# models
 from langchain_openai import ChatOpenAI
-from langchain_anthropic import ChatAnthropic
-from langchain_google_genai import ChatGoogleGenerativeAI
+from typing import List, Tuple, Optional
 
 # custom tools
-from tools.search_ddg import search_ddg
-from tools.fetch_page import fetch_page
+from tools.search_ddg import search_duckduckgo
+from tools.fetch_page import fetch_page_content
 
 def get_openai_apikey() -> str:
     """
     OpenAI APIキーを取得します。
-
     環境変数またはsecret.jsonファイルからAPIキーを取得します。
 
     Returns:
@@ -75,89 +69,91 @@ CUSTOM_SYSTEM_PROMPT = """
 
 回答の最後には、参照したページのURLを**必ず**記載してください。（これにより、ユーザーは回答を検証することができます）
 
-ユーザーが使用している言語で回答するようにしてください。
-ユーザーが日本語で質問した場合は、日本語で回答してください。ユーザーがスペイン語で質問した場合は、スペイン語で回答してください。
+必ず日本語で回答するようにしてください。
 """
 
+def create_agent(model_name: str) -> AgentExecutor:
+    """
+    指定されたモデル名を使用してエージェントを作成します。
 
-def init_page():
-    st.set_page_config(
-        page_title="Web Browsing Agent",
-        page_icon="🤗"
-    )
-    st.header("Web Browsing Agent 🤗")
-    st.sidebar.title("Options")
+    Args:
+        model_name (str): 使用するモデル名
 
-
-def init_messages():
-    clear_button = st.sidebar.button("Clear Conversation", key="clear")
-    if clear_button or "messages" not in st.session_state:
-        st.session_state.messages = [
-            {"role": "assistant", "content": "こんにちは！なんでも質問をどうぞ！"}
-        ]
-        st.session_state['memory'] = ConversationBufferWindowMemory(
-            return_messages=True,
-            memory_key="chat_history",
-            k=10
-        )
-
-def select_model(temperature: float=0) -> ChatOpenAI:
-    models = ("gpt-4o", "gpt-4o-mini")
-    model = st.sidebar.radio("Chose a model", models)
-    if model == "gpt-4o":
-        return ChatOpenAI(
-            api_key=get_openai_apikey(),
-            temperature=temperature,
-            model_name="gpt-4o"
-        )
-    elif model == "gpt-4o-mini":
-        return ChatOpenAI(
-            api_key=get_openai_apikey(),
-            temperature=temperature,
-            model_name="gpt-4o-mini"
-        )
-
-def create_agent():
-    tools = [search_ddg, fetch_page]
+    Returns:
+        AgentExecutor: 作成されたエージェント
+    """
+    tools = [search_duckduckgo, fetch_page_content]
     prompt = ChatPromptTemplate.from_messages([
         ("system", CUSTOM_SYSTEM_PROMPT),
         MessagesPlaceholder(variable_name="chat_history"),
         ("user", "{input}"),
         MessagesPlaceholder(variable_name="agent_scratchpad")
     ])
-    llm = select_model()
+    llm = ChatOpenAI(
+        api_key=get_openai_apikey(),
+        temperature=0,
+        model_name=model_name
+    )
     agent = create_tool_calling_agent(llm, tools, prompt)
     return AgentExecutor(
         agent=agent,
         tools=tools,
         verbose=True,
-        memory=st.session_state['memory']
+        memory=ConversationBufferWindowMemory(
+            return_messages=True,
+            memory_key="chat_history",
+            k=10
+        )
     )
 
+def chat(message: str, history: List[Tuple[str, str]], model_name: str) -> str:
+    """
+    チャットメッセージを処理し、エージェントからの応答を取得します。
 
-def main():
-    init_page()
-    init_messages()
-    web_browsing_agent = create_agent()
+    Args:
+        message (str): ユーザーからのメッセージ
+        history (List[Tuple[str, str]]): チャット履歴
+        model_name (str): 使用するモデル名
 
-    for msg in st.session_state['memory'].chat_memory.messages:
-        st.chat_message(msg.type).write(msg.content)
+    Returns:
+        str: エージェントからの応答
+    """
+    agent = create_agent(model_name)
+    
+    # Convert Gradio history to LangChain format
+    for human, ai in history:
+        agent.memory.chat_memory.add_user_message(human)
+        agent.memory.chat_memory.add_ai_message(ai)
+    
+    response = agent.invoke({'input': message})
+    
+    # Return the user message and AI response as a pair
+    return history + [[message, response["output"]]]
 
-    if prompt := st.chat_input(placeholder="2023 FIFA 女子ワールドカップの優勝国は？"):
-        st.chat_message("user").write(prompt)
+def clear_conversation() -> Optional[None]:
+    """
+    チャット履歴をクリアします。
 
-        with st.chat_message("assistant"):
-            # コールバック関数の設定 (エージェントの動作の可視化用)
-            st_cb = StreamlitCallbackHandler(
-                st.container(), expand_new_thoughts=True)
+    Returns:
+        None: チャット履歴をクリアするためにNoneを返します
+    """
+    return None
 
-            # エージェントを実行
-            response = web_browsing_agent.invoke(
-                {'input': prompt},
-                config=RunnableConfig({'callbacks': [st_cb]})
-            )
-            st.write(response["output"])
+with gr.Blocks() as demo:
+    gr.Markdown("# Web Browsing Agent")
+    
+    with gr.Row():
+        with gr.Column(scale=1):
+            model = gr.Radio(["gpt-4o-mini", "gpt-4o"], label="Choose a model", value="gpt-4o-mini")
 
+        with gr.Column(scale=4):
+            chatbot = gr.Chatbot(height=450)
+            msg = gr.Textbox(label="Enter your message")
+            clear = gr.Button("メッセージをクリア")
+        
+    
+    msg.submit(chat, inputs=[msg, chatbot, model], outputs=[chatbot])
+    clear.click(clear_conversation, outputs=[chatbot])
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    demo.launch()

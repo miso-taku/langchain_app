@@ -22,6 +22,10 @@ pymupdf = "^1.24.9"
 faiss-cpu = "^1.8.0.post1"
 pypdf2 = "^3.0.1"
 langsmith = "^0.1.94"
+duckduckgo-search = "^6.2.5"
+html2text = "^2024.2.26"
+lxml = {extras = ["html-clean"], version = "^5.2.2"}
+readability-lxml = "^0.8.1"
 
 
 [build-system]
