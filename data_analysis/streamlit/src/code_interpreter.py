@@ -30,9 +30,9 @@ class CodeInterpreterClient:
     code_interpreter.run("file.csvの内容を読み取ってグラフを書いてください")
     """
 
-    def __init__(self):
+    def __init__(self, api_key: str):
         self.file_ids: List[str] = []
-        self.openai_client = OpenAI()
+        self.openai_client = OpenAI(api_key=api_key)
         self.assistant_id = self._create_assistant_agent()
         self.thread_id = self._create_thread()
         self._create_file_directory()

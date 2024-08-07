@@ -92,7 +92,7 @@ def initialize_page() -> None:
     clear_button = st.sidebar.button("Clear Conversation", key="clear")
     if clear_button or "messages" not in st.session_state:
         st.session_state.messages = []
-        st.session_state.code_interpreter_client = CodeInterpreterClient()
+        st.session_state.code_interpreter_client = CodeInterpreterClient(api_key=get_openai_apikey())
         st.session_state.memory = ConversationBufferWindowMemory(
             return_messages=True, memory_key="chat_history", k=10
         )
